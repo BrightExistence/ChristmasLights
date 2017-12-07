@@ -1,0 +1,16 @@
+﻿{
+  "assemblies": [
+    {
+      "name": "ChristmasLights",
+      "path": "ChristmasLights.dll",
+      "enabled": true,
+      "compatibleversions": [
+        {
+          "Major": 0,
+          "Minor": 4,
+          "Build": 4
+        }
+      ]
+    }
+  ]
+}
