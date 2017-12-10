@@ -1,6 +1,5 @@
-﻿
-
-using System;
+﻿using System;
+using BrightExistence.SimpleTools;
 
 namespace BrightExistence
 {

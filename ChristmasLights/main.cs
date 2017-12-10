@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 using System.Text;
-using BrightExistence;
+using BrightExistence.SimpleTools;
 
 namespace BrightExistence.ChristmasLights
 {
@@ -71,9 +71,9 @@ namespace BrightExistence.ChristmasLights
             LeavesLit.isDestructible = true;
             LeavesLit.isPlaceable = true;
             LeavesLit.sideAll = ChristmasLeaves.ID;
-            LeavesLit.lightSource = new SimpleItem.Light();
-            LeavesLit.lightSource.intensity = 1f;
-            LeavesLit.lightSource.range = 50;
+            //LeavesLit.lightSource = new SimpleItem.Light();
+            //LeavesLit.lightSource.intensity = 1f;
+            //LeavesLit.lightSource.range = 50;
 
             // ---------------(AUTOMATED BLOCK REGISTRATION)---------------
             foreach (SimpleItem Item in Variables.Items) Item.registerItem(items);
@@ -89,7 +89,7 @@ namespace BrightExistence.ChristmasLights
             //---------------POPULATE RECIPES HERE---------------
 
             // Christmas Leaves
-            ChristmasLightsRecipe.Requirements.Add(new InventoryItem("leavestemperate", 1));
+            ChristmasLightsRecipe.addRequirement("leavestemperate");
             ChristmasLightsRecipe.userCraftable = true;
             ChristmasLightsRecipe.defaultLimit = 15;
             ChristmasLightsRecipe.defaultPriority = -100;
@@ -102,15 +102,12 @@ namespace BrightExistence.ChristmasLights
             //---------------AUTOMATED INVENTORY BLOCK REGISTRATION---------------
             foreach (SimpleItem Item in Variables.Items) Item.registerAsCrate();
             Pipliz.Log.Write("{0}: Crate registration complete.", Variables.NAMESPACE);
-
-            //---------------STARTING INVENTORY ADJUSTMENTS---------------
-            Inventory.AddToInitialPile(new InventoryItem(ChristmasLeaves.ID));
         }
 
         /// <summary>
         /// AfterDefiningNPCTypes callback. Used for registering jobs.
         /// </summary>
-        [ModLoader.ModCallback(ModLoader.EModCallbackType.AfterItemTypesDefined, "BrightExistence.BrightColony.AfterDefiningNPCTypes")]
+        [ModLoader.ModCallback(ModLoader.EModCallbackType.AfterItemTypesDefined, Variables.NAMESPACE + ".AfterDefiningNPCTypes")]
         [ModLoader.ModCallbackProvidesFor("pipliz.apiprovider.jobs.resolvetypes")]
         public static void AfterDefiningNPCTypes()
         {

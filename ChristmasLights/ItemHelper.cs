@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using Pipliz.APIProvider.Jobs;
 using Pipliz.JSON;
-using System.IO;
 
-namespace BrightExistence
+namespace BrightExistence.SimpleTools
 {
     public static class ItemHelper
     {
@@ -52,6 +51,18 @@ namespace BrightExistence
                     }
                 }
             }
+        }
+    }
+
+    public class ItemShell
+    {
+        public string strItemkey = "[unknown]";
+        public int intAmount;
+
+        public ItemShell(string Key, int amount = 1)
+        {
+            if (Key != null) strItemkey = Key;
+            intAmount = amount;
         }
     }
 
@@ -178,13 +189,27 @@ namespace BrightExistence
         public SimpleItem.Light lightSource;
 
         /// <summary>
+        /// True to overwrite an existing item by the same ID if it is found, is ignored if masking is used.
+        /// </summary>
+        public bool overwrite = false;
+
+        /// <summary>
+        /// Set to false if you do NOT want this item, and any SimpleRecipe/SimpleResearch objects which know about and depend upon it, registered.
+        /// </summary>
+        public bool enabled = true;
+
+        /// <summary>
         /// The ID, or name of this item as it will be stored in the server database.
         /// </summary>
         public string ID
         {
             get
             {
-                if (maskItem == null) return NAMESPACE + "." + Name;
+                if (maskItem == null)
+                {
+                    if (NAMESPACE == null || NAMESPACE.Length < 1) return Name;
+                    else return NAMESPACE + "." + Name;
+                }
                 else return maskItem;
             }
         }
@@ -194,8 +219,8 @@ namespace BrightExistence
         {
             get
             {
-                if (itrThisItem == null) buildItemRaw();
-                return itrThisItem;
+                this.itrThisItem = new ItemTypesServer.ItemTypeRaw(this.ID, itemAsJSON());
+                return itrThisItem; 
             }
             set
             {
@@ -230,15 +255,73 @@ namespace BrightExistence
         /// <param name="items">The server's item database (a Dictionary object). Will be passed to the afterAddingBaseTypes callback method.</param>
         public void registerItem(Dictionary<string, ItemTypesServer.ItemTypeRaw> items)
         {
-            Pipliz.Log.Write("{0}: Preparing to register block {1} to ID {2}", Variables.NAMESPACE, this.Name, this.ID);
+            if (enabled)
+            {
+                if (maskItem != null)
+                {
+                    Pipliz.Log.Write("{0}: Attempting to mask item {1} with {2}.", Variables.NAMESPACE, this.ID, this.Name);
+                    // Masking is being used, see if there is an existing item to mask.
+                    if (items.ContainsKey(this.ID))
+                    {
+                        // It exists, merge values.
+                        ItemTypesServer.ItemTypeRaw originalItem;
+                        if (items.TryGetValue(this.ID, out originalItem))
+                        {
+                            // Successfully retrieved item, overwrite its properties which are explicity specified in this object.
+                            itemAsJSON(originalItem.description);
+                            Pipliz.Log.Write("{0}: Masking complete.", Variables.NAMESPACE);
+                        }
+                        else
+                        {
+                            // Item exists, but we can't retrieve it.
+                            Pipliz.Log.Write("{0}: Masking failed, item {1} exists but we could not retrieve it. Overwriting instead.", Variables.NAMESPACE, this.ID);
+                            // Remove existing item.
+                            ItemHelper.tryRemoveItem(this.ID);
+                            // Add this item.
+                            items.Add(this.ID, thisItemRaw);
+                        }
 
-            // Remove masked item, if there is one.
-            if (maskItem != null) ItemHelper.tryRemoveItem(maskItem);
+                    }
+                    else
+                    {
+                        // Item did not already exist, let's add it.
+                        Pipliz.Log.Write("{0}: Masking was enabled, but masked item was not found. Adding {1} as a new item with ID {2}", Variables.NAMESPACE, this.Name, this.ID);
+                        items.Add(this.ID, thisItemRaw);
+                    }
+                }
+                else
+                {
+                    Pipliz.Log.Write("{0}: Registering block {1} to ID {2}", Variables.NAMESPACE, this.Name, this.ID);
+                    if (items.ContainsKey(this.ID))
+                    {
+                        // Item already exists, do we overwrite?
+                        if (overwrite)
+                        {
+                            Pipliz.Log.Write("{0}: Item {1} already exists, overwriting item entry.", Variables.NAMESPACE, this.ID);
+                            // Remove existing item.
+                            ItemHelper.tryRemoveItem(this.ID);
+                            // Add this item.
+                            items.Add(this.ID, thisItemRaw);
+                        }
+                        else
+                        {
+                            // Do nothing, it already exists and we're neither masking nor overwriting.
+                            Pipliz.Log.Write("{0}: Item {1} already exists, registration is not necessary and is being aborted.", Variables.NAMESPACE, this.ID);
+                        }
+                    }
+                    else
+                    {
+                        // Item does not already exist, add it.
+                        items.Add(this.ID, thisItemRaw);
+                    }
+                }
 
-            Pipliz.Log.Write("{0}: Registering item {1} as {2} (this is a masking: {3})", Variables.NAMESPACE, this.Name, this.ID, Convert.ToString(this.maskItem != null));
-            items.Add(this.ID, thisItemRaw);
-
-            Pipliz.Log.Write("{0}: Block {1} has been registered to ID {2}", Variables.NAMESPACE, this.Name, this.ID);
+                Pipliz.Log.Write("{0}: Block {1} registration complete.", Variables.NAMESPACE, this.Name);
+            }
+            else
+            {
+                Pipliz.Log.Write("{0}: Block {1} has been disabled, and will NOT be registered.", Variables.NAMESPACE, this.Name);
+            }
         }
 
         /// <summary>
@@ -281,11 +364,13 @@ namespace BrightExistence
         }
 
         /// <summary>
-        /// Builds an ItemTypeServer.ItemTypeRaw object based on this object's data and registers it as a block (named as this object's ID property.)
+        /// Returns this item's properties as a JSONNode.
         /// </summary>
-        protected void buildItemRaw()
+        /// <param name="thisItemJSON">Optional. If provided overwrites the values in provided JSONNode with this object's values and returns provided JSON.</param>
+        /// <returns>A JSONNode object containing original data (if provided by thisItemJSON parameter) overwritten by this item's data.</returns>
+        protected JSONNode itemAsJSON(JSONNode thisItemJSON = null)
         {
-            JSONNode thisItemJSON = new JSONNode();
+            if (thisItemJSON == null) thisItemJSON = new JSONNode();
             if (Icon != null) thisItemJSON.SetAs("icon", Icon);
             if (isPlaceable != null) thisItemJSON.SetAs("isPlaceable", isPlaceable);
             if (isDestructible != null) thisItemJSON.SetAs("isDestructible", isDestructible);
@@ -325,7 +410,6 @@ namespace BrightExistence
             if (sideRight != null) thisItemJSON.SetAs("sidex+", sideRight);
             if (onPlaceAudio != null) thisItemJSON.SetAs("onPlaceAudio", onPlaceAudio);
             if (onRemoveAudio != null) thisItemJSON.SetAs("onRemoveAudio", onRemoveAudio);
-            this.itrThisItem = new ItemTypesServer.ItemTypeRaw(this.ID, thisItemJSON);
             /*
             using (StreamWriter toJSON = new StreamWriter(this.Name + ".JSON"))
             {
@@ -333,6 +417,7 @@ namespace BrightExistence
             }
             */
             Pipliz.Log.Write("{0}: Created raw item type {1}, not yet registered.", Variables.NAMESPACE, this.Name);
+            return thisItemJSON;
         }
 
         /// <summary>

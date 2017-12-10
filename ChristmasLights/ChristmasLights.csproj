@@ -16,7 +16,7 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\Debug\BrightExistence\ChristmasLights\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -55,6 +55,7 @@
     <Compile Include="ItemHelper.cs" />
     <Compile Include="main.cs" />
     <Compile Include="RecipeHelper.cs" />
+    <Compile Include="ResearchHelper.cs" />
     <Compile Include="TextureHelper.cs" />
     <Compile Include="Variables.cs" />
   </ItemGroup>
